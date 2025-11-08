@@ -9,6 +9,10 @@ from faker import Faker
 
 
 def generate_list_of_dict() -> dict[str, str]:
+    '''
+    Метод возвращает словарь со случайным пользователем 
+    '''
+
     fake = Faker(locate='ru_Ru')
 
     return {
@@ -20,7 +24,11 @@ def generate_list_of_dict() -> dict[str, str]:
 
 
 
-def send_kafka():
+def send_to_kafka():
+    '''
+    Метод отправляет информацию о пользователе в кафку 
+    '''
+
     conf = {"bootstrap.servers": "localhost:19092"}
     producer = Producer(conf)
 
@@ -39,4 +47,4 @@ def send_kafka():
 
 
 if __name__ == "__main__":
-    send_kafka()
+    send_to_kafka()
