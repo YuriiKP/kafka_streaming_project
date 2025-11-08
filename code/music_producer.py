@@ -142,7 +142,7 @@ def get_rundom_event(df: pd.DataFrame) -> dict[str, Any]:
     return event_func(user_row)
 
 
-def send_kafka(df: pd.DataFrame) -> None: 
+def send_to_kafka(df: pd.DataFrame) -> None: 
     '''
     Метод отправляет каждую секунду в кафку случайное событие
     '''
@@ -166,4 +166,4 @@ def send_kafka(df: pd.DataFrame) -> None:
 
 if __name__ == "__main__":
     df = generate_users(10_000)
-    send_kafka(df)
+    send_to_kafka(df)
