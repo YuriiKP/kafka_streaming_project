@@ -68,7 +68,7 @@ docker-compose up -d
 
 6. Откройте Kafka UI: http://localhost:8080
 
-## 📖 Использование
+## 📖 Использование Kafka + s3 (MinIO)
 
 ### 1. Генерация музыкальных событий
 
@@ -127,6 +127,116 @@ python code/easy_producer.py
 python code/easy_consumer.py
 ```
 
+## 📖 Использование Kafka + ClickHouse
+
+### 1 Подключаемся к ClickHouse
+Хост: localhost:8123
+Пользователь: click
+Пароль: click
+
+### 2 Создаем в ClickHouse необходимые таблицы
+
+Таблицы и материализованное передставление для взаимодействия с простым producer через ClickHouse.
+
+```bash
+create table easy_consumer (
+    uuid String,
+    first_name String,
+    last_name String,
+    middle_name String,
+    timestamp String
+) engine Kafka settings
+ 	kafka_broker_list = 'kafka',
+    kafka_topic_list = 'my_topic',
+    kafka_group_name = 'foo',
+    kafka_format = 'JSON';
+
+
+create table easy_consumer_phys (
+    uuid String,
+    first_name String,
+    last_name String,
+    middle_name String,
+    timestamp String
+) engine = MergeTree()
+order by (uuid);
+
+
+create materialized view easy_consumer_mat_view to easy_consumer_phys
+	as select * from easy_consumer;
+```
+
+Таблицы и материализованное передставление для взаимодействия с музыкальными событиями
+
+```bash
+create table music_counsumer (
+    event_param String,
+    event_timestamp String
+) engine = Kafka settings
+    kafka_broker_list = 'kafka',
+    kafka_topic_list = 'music_events',
+    kafka_group_name = 'foo',
+    kafka_format = 'JSON';
+
+
+create table music_consumer_phys (
+    event_param String,
+    event_timestamp String,
+    uuid UUID DEFAULT generateUUIDv4()
+) engine = MergeTree()
+order by (uuid);
+
+
+create materialized view music_consumer_mat_view to music_consumer_phys
+	  as select * from music_counsumer;
+```
+
+### 3 Читаем с данными в ClickHouse
+
+Читаем данные из топика my_topic
+
+```bash
+-- 10 первых строк 
+select * from easy_consumer_mat_view limit 10;
+
+-- Схема таблицы 
+describe table easy_consumer_mat_view;
+
+-- 10 самых часто встречающихся имен
+select first_name, 
+	   count(uuid) cnt 
+from easy_consumer_mat_view 
+group by first_name 
+order by cnt desc 
+limit 10;
+```
+
+Читаем данные из топика music_events
+
+```bash
+-- Все события воспроизведения трека
+select * 
+from music_consumer_mat_view
+where JSONExtractInt(event_param, 'event_type_id') = 1
+
+
+-- Количество событий по типам
+select 
+    JSONExtractInt(event_param, 'event_type_id') event_type_id,
+    JSONExtractString(event_param, 'event_type') event_type,
+    count(*) as cnt
+from music_consumer_mat_view
+group by event_type_id, event_type
+order by cnt desc;
+
+```re
+
+
+## 📊 Мониторинг
+
+- **Kafka UI**: http://localhost:8080
+- **MinIO UI**: http://localhost:9000
+
 
 ## 📁 Структура проекта
 
@@ -184,14 +294,10 @@ Kafka/
 
 - **Apache Kafka** - потоковая платформа для обработки событий
 - **MinIO** - S3-совместимое объектное хранилище
+- **ClickHouse** - колоночная СУБД
 - **DuckDB** - аналитическая СУБД для обработки данных
 - **Pandas** - библиотека для обработки данных
-- **PyArrow** - библиотека для работы с Parquet
 - **Confluent Kafka** - Python клиент для Kafka
 - **Pendulum** - библиотека для работы с датами и временем
 - **Faker** - генерация тестовых данных
 
-## 📊 Мониторинг
-
-- **Kafka UI**: http://localhost:8080 - мониторинг
-- **MinIO UI**: http://localhost:9000 - управление s3
