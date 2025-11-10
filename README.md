@@ -229,7 +229,7 @@ from music_consumer_mat_view
 group by event_type_id, event_type
 order by cnt desc;
 
-```re
+```
 
 
 ## 📊 Мониторинг
